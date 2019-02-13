@@ -34,3 +34,5 @@ python/
 data/
 darknet53.conv.74
 sw2.MP4
+coco_data/coco/
+coco_data/
