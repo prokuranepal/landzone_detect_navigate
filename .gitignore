@@ -25,3 +25,12 @@ ehthumbs.db
 Icon?
 Thumbs.db
 *.swp
+backup/
+Images/
+yolo_30000.weights
+yolov3.weights
+yolo_30000.weights yolov2-tiny.weights yolov3.weights
+python/
+data/
+darknet53.conv.74
+sw2.MP4
