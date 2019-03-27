@@ -1,4 +1,3 @@
-import argparse
 from dronekit import connect, VehicleMode
 from pymavlink import mavutil
 import exceptions
@@ -11,8 +10,6 @@ import time
 import sys
 
 # flight state machine
-
-
 class States(Enum):
     MANUAL = 0
     GUIDED = 1
@@ -43,8 +40,7 @@ class BackyardFlyer():
         self.flight_state = States.MANUAL
 
         # register callbacks
-        self.vehicle.add_attribute_listener(
-            'location.local_frame', self.local_location_callback)
+        self.vehicle.add_attribute_listener('location.local_frame', self.local_location_callback)
         self.vehicle.add_attribute_listener('velocity', self.velocity_callback)
         self.vehicle.add_attribute_listener('armed', self.state_callback)
         self.vehicle.add_attribute_listener('mode', self.state_callback)
@@ -74,56 +70,21 @@ class BackyardFlyer():
         msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
             0,       # time_boot_ms (not used)
             0, 0,    # target system, target component
-            mavutil.mavlink.MAV_FRAME_LOCAL_NED,  # frame
-            0b0000111111111000,  # type_mask (only positions enabled)
-            # x, y, z positions (or North, East, Down in the MAV_FRAME_BODY_NED frame
-            north, east, down,
-            0, 0, 0,  # x, y, z velocity in m/s  (not used)
-            # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
-            0, 0, 0,
-            0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED, # frame
+            0b0000111111111000, # type_mask (only positions enabled)
+            north, east, down, # x, y, z positions (or North, East, Down in the MAV_FRAME_BODY_NED frame
+            0, 0, 0, # x, y, z velocity in m/s  (not used)
+            0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
+            0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink) 
         # send command to vehicle
         self.vehicle.send_mavlink(msg)
 
-    def send_ned_velocity(self, velocity_x, velocity_y, velocity_z, duration):
-        """
-        Move vehicle in direction based on specified velocity vectors and
-        for the specified duration.
-
-        This uses the SET_POSITION_TARGET_LOCAL_NED command with a type mask enabling only 
-        velocity components 
-        (http://dev.ardupilot.com/wiki/copter-commands-in-guided-mode/#set_position_target_local_ned).
-        
-        Note that from AC3.3 the message should be re-sent every second (after about 3 seconds
-        with no message the velocity will drop back to zero). In AC3.2.1 and earlier the specified
-        velocity persists until it is canceled. The code below should work on either version 
-        (sending the message multiple times does not cause problems).
-        
-        See the above link for information on the type_mask (0=enable, 1=ignore). 
-        At time of writing, acceleration and yaw bits are ignored.
-        """
-        msg = vehicle.message_factory.set_position_target_local_ned_encode(
-            0,       # time_boot_ms (not used)
-            0, 0,    # target system, target component
-            mavutil.mavlink.MAV_FRAME_LOCAL_NED,  # frame
-            0b0000111111000111,  # type_mask (only speeds enabled)
-            0, 0, 0,  # x, y, z positions (not used)
-            velocity_x, velocity_y, velocity_z,  # x, y, z velocity in m/s
-            # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
-            0, 0, 0,
-            0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
-
-        # send command to vehicle on 1 Hz cycle
-        for x in range(0, duration):
-            vehicle.send_mavlink(msg)
-            time.sleep(1)
 
     def local_location_callback(self, _, attr_name, value):
         if self.flight_state == States.TAKEOFF:
             altitude = -1.0 * value.down
             if altitude > 0.95 * self.target_position[2]:
-                self.all_waypoints = [
-                    (0.0, 0.0, 5.0, 0.0), (5.0, 0.0, 5.0, 0), (5.0, 5.0, 5.0, 0), (0.0, 5.0, 5.0, 0.0)]
+                self.all_waypoints = [(0.0,0.0,5.0,0.0), (5.0,0.0,5.0,0), (5.0,5.0,5.0,0),(0.0,5.0,5.0,0.0)]
                 self.waypoint_transition()
         if self.flight_state == States.WAYPOINT:
             north = value.north
@@ -141,16 +102,16 @@ class BackyardFlyer():
         # print("inside velocity_callback")
         if self.flight_state == States.LANDING:
             if ((self.vehicle.location.global_frame.alt - self.vehicle.home_location.alt < 0.5) and
-                    abs(self.vehicle.location.local_frame.down) < 0.2):
+                abs(self.vehicle.location.local_frame.down) < 0.2):
                 self.disarming_transition()
 
     def state_callback(self, _, attr_name, value):
-        print("inside state_callback")
+        print ("inside state_callback")
         # print(self.flight_state)
         if not self.in_mission:
             print('not in mission')
             if self.vehicle.mode.name == 'STABILIZE':
-                self.stop_transition()
+                self.stop_transition()            
         elif self.flight_state == States.MANUAL and self.vehicle.is_armable:
             # print('babu bhaiya')
             self.arming_transition()
@@ -161,7 +122,7 @@ class BackyardFlyer():
             if not self.vehicle.armed:
                 print('i am now going manual')
                 self.manual_transition()
-
+    
     def calculate_box(self):
         print("calculate_box")
         return self.all_waypoints.pop()
@@ -172,6 +133,7 @@ class BackyardFlyer():
         self.flight_state = States.ARMING
         self.vehicle.mode = VehicleMode('GUIDED')
         self.vehicle.armed = True
+
 
     def takeoff_transition(self):
         print('takeoff transition')
@@ -188,8 +150,7 @@ class BackyardFlyer():
             box_cord = self.calculate_box()
             self.target_position[:] = box_cord[:3]
             print(self.target_position)
-            self.goto_position_target_local_ned(
-                north=self.target_position[0], east=self.target_position[1], down=-1.0 * self.target_position[2])
+            self.goto_position_target_local_ned(north=self.target_position[0], east=self.target_position[1], down=-1.0 * self.target_position[2])
             self.flight_state = States.WAYPOINT
         else:
             print('mission complete')
@@ -199,27 +160,28 @@ class BackyardFlyer():
     def landing_transition(self):
         print('landing transition')
         self.flight_state = States.LANDING
-        # self.vehicle.mode = VehicleMode('LAND')
+        self.vehicle.mode = VehicleMode('LAND')
         # print(self.vehicle.mode)
-        self.
-
+        
+                
     def disarming_transition(self):
         print('disarm transition')
         # print(self.vehicle.location.local_frame)
         self.flight_state = States.DISARMING
         self.vehicle.armed = False
         # print(self.vehicle)
-
+        
     def manual_transition(self):
         print('manual transition')
         self.flight_state = States.MANUAL
         self.in_mission = False
         print(self.vehicle.mode)
         self.vehicle.mode = VehicleMode('STABILIZE')
-        # time.sleep(2)
+        # time.sleep(2)        
         # while self.vehicle.mode.name != 'STABILIZE':
         #     print(self.vehicle.mode.name)
         #     pass
+        
 
     def stop_transition(self):
         print('stop transition')
@@ -227,19 +189,23 @@ class BackyardFlyer():
         # self.vehicle.close()
         print(bool(self.vehicle))
 
+        
+        
 
-# Set up option parsing to get connection string
-parser = argparse.ArgumentParser(
-    description='Control Copter and send commands in GUIDED mode ')
-parser.add_argument('--connect',
-                    help="Vehicle connection target string. If not specified, SITL automatically started and used.")
+
+
+#Set up option parsing to get connection string
+import argparse  
+parser = argparse.ArgumentParser(description='Control Copter and send commands in GUIDED mode ')
+parser.add_argument('--connect', 
+                   help="Vehicle connection target string. If not specified, SITL automatically started and used.")
 args = parser.parse_args()
 
 connection_string = args.connect
 sitl = None
 
 
-# Start SITL if no connection string specified
+#Start SITL if no connection string specified
 if not connection_string:
     import dronekit_sitl
     sitl = dronekit_sitl.start_default()
