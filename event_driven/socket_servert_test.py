@@ -15,6 +15,15 @@ async def index(request):
     with open('index.html') as f:
         return web.Response(text=f.read(), content_type='text/html')
 
+@sio.on('connect')
+async def connect(sid, environ):
+    print('connect',sid)
+
+@sio.on('disconnect')
+async def disconnect(sid):
+    print('disconnect',sid)
+
+
 # If we wanted to create a new websocket endpoint,
 # use this decorator, passing in the name of the
 # event we wish to listen out for
