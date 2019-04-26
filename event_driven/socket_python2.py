@@ -1,5 +1,6 @@
 import socketio
 import eventlet
+import json
 
 sio = socketio.Server()
 app = socketio.WSGIApp(sio, static_files={
@@ -12,8 +13,8 @@ def connect(sid, environ):
 
 @sio.on('message',namespace='/')
 def message(sid, data):
-    print('message ', data)
-    sio.emit('reply','welcome',room=sid)
+    print(json.dumps(data))
+    sio.emit('reply',{'kamina':'go to hell'},room=sid)
 
 @sio.on('disconnect',namespace='/')
 def disconnect(sid):
