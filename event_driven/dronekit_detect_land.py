@@ -54,6 +54,7 @@ class BackyardFlyer():
         print(self.vehicle.is_armable)
         print(self.vehicle.mode)
 
+    
     def goto_position_target_local_ned(self, north, east, down):
         """	
         Send SET_POSITION_TARGET_LOCAL_NED command to request the vehicle fly to a specified 
@@ -222,6 +223,29 @@ class BackyardFlyer():
             self.check_state[0] = True
             # self.flight_state = States.WAYPOINT
 
+    def pid_controller(self,
+                z_target, 
+                z_actual, 
+                z_dot_target, 
+                z_dot_actual,
+                dt=0.1,
+                z_dot_dot_ff=0.0):
+        
+        err = z_target - z_actual
+        err_dot = z_dot_target - z_dot_actual
+        self.integrated_error += err * dt
+        
+        p = self.k_p * err
+        i = self.integrated_error * self.k_i
+        d = self.k_d * err_dot
+         
+        u_bar = p + i + d + z_dot_dot_ff
+        u = self.vehicle_mass * (self.g - u_bar)
+        return u
+    
+    def find_vel(self, angle, curr_vel_x, cur_vel_y):
+        pass
+
     def landing_transition(self):
         print('landing transition')
         self.flight_state = States.LANDING
@@ -229,6 +253,7 @@ class BackyardFlyer():
         # print(self.vehicle.mode)
         down_speed = 0.5  # should be greater than zero to descend
         duration = 5
+        
         self.send_ned_wo_duration(velocity_x=0, velocity_y=0,
                                   velocity_z=0.5)
         # self.send_ned_wo_duration(0, 0, 0, 1)
