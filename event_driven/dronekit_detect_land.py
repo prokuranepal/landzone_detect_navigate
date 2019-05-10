@@ -6,10 +6,11 @@ import socket
 from enum import Enum
 import numpy as np
 import time
-import cv2
+# import cv2
 # del imports
 import sys
-
+from math import cos, sin, radians
+import json
 # flight state machine
 
 
@@ -54,20 +55,19 @@ class BackyardFlyer():
         print(self.vehicle.is_armable)
         print(self.vehicle.mode)
 
-    
     def goto_position_target_local_ned(self, north, east, down):
-        """	
-        Send SET_POSITION_TARGET_LOCAL_NED command to request the vehicle fly to a specified 
+        """
+        Send SET_POSITION_TARGET_LOCAL_NED command to request the vehicle fly to a specified
         location in the North, East, Down frame.
 
-        It is important to remember that in this frame, positive altitudes are entered as negative 
+        It is important to remember that in this frame, positive altitudes are entered as negative
         "Down" values. So if down is "10", this will be 10 metres below the home altitude.
 
         Starting from AC3.3 the method respects the frame setting. Prior to that the frame was
-        ignored. For more information see: 
+        ignored. For more information see:
         http://dev.ardupilot.com/wiki/copter-commands-in-guided-mode/#set_position_target_local_ned
 
-        See the above link for information on the type_mask (0=enable, 1=ignore). 
+        See the above link for information on the type_mask (0=enable, 1=ignore).
         At time of writing, acceleration and yaw bits are ignored.
 
         """
@@ -91,16 +91,16 @@ class BackyardFlyer():
         Move vehicle in direction based on specified velocity vectors and
         for the specified duration.
 
-        This uses the SET_POSITION_TARGET_LOCAL_NED command with a type mask enabling only 
-        velocity components 
+        This uses the SET_POSITION_TARGET_LOCAL_NED command with a type mask enabling only
+        velocity components
         (http://dev.ardupilot.com/wiki/copter-commands-in-guided-mode/#set_position_target_local_ned).
 
         Note that from AC3.3 the message should be re-sent every second (after about 3 seconds
         with no message the velocity will drop back to zero). In AC3.2.1 and earlier the specified
-        velocity persists until it is canceled. The code below should work on either version 
+        velocity persists until it is canceled. The code below should work on either version
         (sending the message multiple times does not cause problems).
 
-        See the above link for information on the type_mask (0=enable, 1=ignore). 
+        See the above link for information on the type_mask (0=enable, 1=ignore).
         At time of writing, acceleration and yaw bits are ignored.
         """
         msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
@@ -224,25 +224,25 @@ class BackyardFlyer():
             # self.flight_state = States.WAYPOINT
 
     def pid_controller(self,
-                z_target, 
-                z_actual, 
-                z_dot_target, 
-                z_dot_actual,
-                dt=0.1,
-                z_dot_dot_ff=0.0):
-        
+                       z_target,
+                       z_actual,
+                       z_dot_target,
+                       z_dot_actual,
+                       dt=0.1,
+                       z_dot_dot_ff=0.0):
+
         err = z_target - z_actual
         err_dot = z_dot_target - z_dot_actual
         self.integrated_error += err * dt
-        
+
         p = self.k_p * err
         i = self.integrated_error * self.k_i
         d = self.k_d * err_dot
-         
+
         u_bar = p + i + d + z_dot_dot_ff
         u = self.vehicle_mass * (self.g - u_bar)
         return u
-    
+
     def find_vel(self, angle, curr_vel_x, cur_vel_y):
         pass
 
@@ -253,9 +253,23 @@ class BackyardFlyer():
         # print(self.vehicle.mode)
         down_speed = 0.5  # should be greater than zero to descend
         duration = 5
-        
-        self.send_ned_wo_duration(velocity_x=0, velocity_y=0,
-                                  velocity_z=0.5)
+        angle = 0
+        velocity = 2
+        while True:
+            try:
+                with open('test.txt') as f:
+                    json_data = json.load(f)
+                    angle = int(json_data)
+                    print(json_data)
+                    break
+            except:
+                continue
+        angle_rad = radians(angle)
+        vel_x = velocity*cos(angle_rad)
+        vel_y = velocity*sin(angle_rad)
+        print('vel_x:'+str(vel_x), 'vel_y:'+str(vel_y))
+        self.send_ned_wo_duration(velocity_x=velocity*cos(angle_rad), velocity_y=velocity*sin(angle_rad),
+                                  velocity_z=0)
         # self.send_ned_wo_duration(0, 0, 0, 1)
 
     def disarming_transition(self):
@@ -315,8 +329,8 @@ if not connection_string:
 # Connect to the Vehicle
 try:
     print('Connecting to vehicle on: %s' % connection_string)
-    # vehicle = connect(connection_string, wait_ready=True)
-    vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
+    vehicle = connect(connection_string, wait_ready=True)
+    # vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
 
     # print(bool(vehicle))
 # Bad TCP connection
