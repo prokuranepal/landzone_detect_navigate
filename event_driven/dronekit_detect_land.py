@@ -1,7 +1,7 @@
-//
-// Copyright (c) Prokura Innovations. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//
+
+# Copyright (c) Prokura Innovations. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import argparse
 from dronekit import connect, VehicleMode
 from pymavlink import mavutil
