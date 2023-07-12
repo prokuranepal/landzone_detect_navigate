@@ -15,6 +15,9 @@ pip install pymavlink
 ```
 python dronekit_detect_land.py
 ```
+## Outuput
+![land_yolo_tiny-2](https://github.com/prokuranepal/landzone_detect_navigate/assets/33648198/1d3bbe0c-aa90-44f8-99be-a719b5b7e9d8)
+
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
